@@ -6,7 +6,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="stylesheet" href="style.css" />
     <!-- here jstree and zip.js  -->
-
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.2.1/themes/default/style.min.css"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.12.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.2.1/jstree.min.js"></script>
     <title>ZIP EXTRACTOR</title>
   </head>
   <body>
@@ -15,16 +21,15 @@
         <h1><a href="#">ZIP EXTRACTOR</a></h1>
       </div>
     </header>
-    <div class="container" id="container">
-      <input
-        type="file"
-        name="upload"
-        id="upload"
-        accept=".zip"
-        onchange="getfile(this)"
-      />
-      <label for="upload" id="upload-label"> Upload File</label>
-      <h5><i>or drag and drop files here</i></h5>
+    <div id="body">
+      <div class="container" id="container">
+        <input type="file" name="upload" id="upload" accept=".zip" />
+        <label for="upload" id="upload-label"> Upload File</label>
+        <h5><i>or drag and drop files here</i></h5>
+      </div>
+      <div class="downloadAll">
+        <input type="button" name="download" id="download" value="Download All">
+      </div>
     </div>
     <script>
       let input = document.getElementById("upload");
@@ -53,11 +58,104 @@
           location.reload();
         }
       }
-      
-      function getfile(e) {
-        const files = e.files;
 
-        console.log(files);
+      let $result = $("#container");
+
+      input.addEventListener("change", function (e) {
+        container.innerHTML = "";
+
+        let files = e.target.files[0];
+        let arr = [];
+        let link = {};
+        handleFile(files, arr, link);
+
+      });
+
+      // Closure to capture the file information.
+      function handleFile(f, arr, link) {
+        JSZip.loadAsync(f) // 1) read the Blob
+          .then(
+            function (zip) {
+              zip.forEach(function (relativePath, zipEntry) {
+                let fileName = zipEntry.name.split("/");
+                let obj = {};
+                buildtreestructure(zip, relativePath,fileName,obj,link,zipEntry.name );
+                arr.push(obj);
+                
+              });
+              $result.jstree({
+                core: {
+                  check_callBack: true,
+                  data: arr
+                },
+              }).on("select_node.jstree",function(e,data){
+                if(link[data.node.text]!="#"){
+                  let downloadLink = document.createElement("a");
+                  downloadLink.setAttribute("href",link[data.node.text]);
+                  downloadLink.setAttribute("download",data.node.text);
+                  downloadLink.click();
+                }
+              });
+              document.getElementById("download").addEventListener("click",function (e) {
+                e.preventDefault();
+                let keys = Object.keys(link); 
+                keys.forEach( function(key) {
+
+                    if(link[key]==="#")
+                        return;
+                    let a = document.createElement('a');
+                    a.href=link[key];
+                    a.download=key;
+                    a.click();
+                });
+            });
+            },
+            function (e) {
+              $result.append(
+                $("<div>", {
+                  class: "alert alert-danger",
+                  text: "Error reading " + f.name + ": " + e.message,
+                })
+              );
+            }
+          );
+      }
+      function buildtreestructure(zip,relativePath,fileName,obj,link,name) {
+        if (fileName[fileName.length - 1] == "") {
+          link[fileName[fileName.length - 2]] = "#";
+          obj["id"] = fileName[fileName.length - 2];
+          obj["text"] = fileName[fileName.length - 2];
+          obj["state"] = { opened: true };
+          if (fileName[fileName.length - 3] == null) {
+            obj["parent"] = "#";
+          } else {
+            obj["parent"] = fileName[fileName.length - 3];
+          }
+        } else if (fileName[0] == name) {
+          obj["id"] = fileName[0];
+          obj["text"] = fileName[0];
+          obj["parent"] = "#";
+          let temp = name.split(".");
+          if (temp[temp.length - 1] == temp[0]) {
+            obj["state"] = { opened: true };
+          }
+          zip
+            .file(relativePath)
+            .async("blob")
+            .then(function (data) {
+              link[fileName[0]] = window.URL.createObjectURL(data);
+            });
+        } else {
+          obj["id"] = fileName[fileName.length - 1];
+          obj["text"] = fileName[fileName.length - 1];
+          obj["parent"] = fileName[fileName.length - 2];
+          zip
+            .file(relativePath)
+            .async("blob")
+            .then(function (data) {
+              link[fileName[fileName.length - 1]] = window.URL.createObjectURL(data);
+            });
+        }
       }
     </script>
   </body>

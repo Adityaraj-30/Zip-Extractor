@@ -25,11 +25,12 @@ a:hover {
 .container {
   border: 2px solid black;
   margin-left: 25%;
-  margin-top: 10%;
-  transition: -50%, -50%;
+  margin-top: 7%;
+  overflow: auto;
   width: 50%;
   height: 50vh;
   border-radius: 6px;
+  padding: 15px;
 }
 #upload {
   display: none;
@@ -59,3 +60,16 @@ h5 {
   top: 60%;
   transform: translate(-50%, -50%);
 }
+#download{
+        border-radius: 6px;
+        border-color: rgb(142, 4, 170);
+        background-color: rgb(164, 1, 197);
+        width: 8em;
+        padding-top: 0.5em;
+        padding-bottom: 0.5em;
+        cursor: pointer;
+        color: white;
+        font-size: 20px;
+        text-align: center;
+        margin-left: 25%;
+    }
